@@ -1,0 +1,103 @@
+#include <stdio.h>
+#include <ctype.h>
+#include <string.h>
+
+#define MAX 10
+
+int n;
+char production[MAX][MAX];
+char first[MAX][MAX];
+char follow[MAX][MAX];
+
+int firstCount[MAX];
+int followCount[MAX];
+
+// Function to find FIRST
+void findFirst(char c, int index) {
+    if (!isupper(c)) {
+        first[index][firstCount[index]++] = c;
+        return;
+    }
+
+    for (int i = 0; i < n; i++) {
+        if (production[i][0] == c) {
+            if (production[i][2] == '#') {
+                first[index][firstCount[index]++] = '#';
+            } else {
+                findFirst(production[i][2], index);
+            }
+        }
+    }
+}
+
+// Function to find FOLLOW
+void findFollow(char c, int index) {
+    if (production[0][0] == c) {
+        follow[index][followCount[index]++] = '$';
+    }
+
+    for (int i = 0; i < n; i++) {
+        for (int j = 2; j < strlen(production[i]); j++) {
+            if (production[i][j] == c) {
+                if (production[i][j + 1] != '\0') {
+                    char next = production[i][j + 1];
+                    if (!isupper(next)) {
+                        follow[index][followCount[index]++] = next;
+                    } else {
+                        for (int k = 0; k < n; k++) {
+                            if (production[k][0] == next) {
+                                for (int l = 0; l < firstCount[k]; l++) {
+                                    if (first[k][l] != '#')
+                                        follow[index][followCount[index]++] = first[k][l];
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    if (production[i][0] != c)
+                        findFollow(production[i][0], index);
+                }
+            }
+        }
+    }
+}
+
+int main() {
+    printf("Enter number of productions: ");
+    scanf("%d", &n);
+
+    printf("Enter productions (Example: E=TR):\n");
+    for (int i = 0; i < n; i++) {
+        scanf("%s", production[i]);
+        firstCount[i] = 0;
+        followCount[i] = 0;
+    }
+
+    // Compute FIRST
+    for (int i = 0; i < n; i++) {
+        findFirst(production[i][0], i);
+    }
+
+    // Compute FOLLOW
+    for (int i = 0; i < n; i++) {
+        findFollow(production[i][0], i);
+    }
+
+    printf("\nFIRST Sets:\n");
+    for (int i = 0; i < n; i++) {
+        printf("FIRST(%c) = { ", production[i][0]);
+        for (int j = 0; j < firstCount[i]; j++)
+            printf("%c ", first[i][j]);
+        printf("}\n");
+    }
+
+    printf("\nFOLLOW Sets:\n");
+    for (int i = 0; i < n; i++) {
+        printf("FOLLOW(%c) = { ", production[i][0]);
+        for (int j = 0; j < followCount[i]; j++)
+            printf("%c ", follow[i][j]);
+        printf("}\n");
+    }
+
+    return 0;
+}

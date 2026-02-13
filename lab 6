@@ -1,0 +1,158 @@
+#include <stdio.h>
+#include <string.h>
+#include <ctype.h>
+
+#define MAX 10
+
+int n;
+char production[MAX][MAX];
+char first[MAX][MAX], follow[MAX][MAX];
+char table[MAX][MAX][MAX];
+
+int firstCount[MAX], followCount[MAX];
+char terminals[MAX];
+int tCount = 0;
+
+// Find FIRST of a non-terminal
+void findFirst(char c, int index) {
+    if (!isupper(c)) {
+        first[index][firstCount[index]++] = c;
+        return;
+    }
+
+    for (int i = 0; i < n; i++) {
+        if (production[i][0] == c) {
+            if (production[i][2] == '#') {
+                first[index][firstCount[index]++] = '#';
+            } else {
+                findFirst(production[i][2], index);
+            }
+        }
+    }
+}
+
+// Find FOLLOW of a non-terminal
+void findFollow(char c, int index) {
+    if (production[0][0] == c)
+        follow[index][followCount[index]++] = '$';
+
+    for (int i = 0; i < n; i++) {
+        for (int j = 2; j < strlen(production[i]); j++) {
+            if (production[i][j] == c) {
+                if (production[i][j+1] != '\0') {
+                    char next = production[i][j+1];
+                    if (!isupper(next)) {
+                        follow[index][followCount[index]++] = next;
+                    } else {
+                        for (int k = 0; k < n; k++) {
+                            if (production[k][0] == next) {
+                                for (int l = 0; l < firstCount[k]; l++) {
+                                    if (first[k][l] != '#')
+                                        follow[index][followCount[index]++] = first[k][l];
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    if (production[i][0] != c)
+                        findFollow(production[i][0], index);
+                }
+            }
+        }
+    }
+}
+
+// Get index of non-terminal
+int getNonTerminalIndex(char c) {
+    for (int i = 0; i < n; i++)
+        if (production[i][0] == c)
+            return i;
+    return -1;
+}
+
+// Get index of terminal
+int getTerminalIndex(char c) {
+    for (int i = 0; i < tCount; i++)
+        if (terminals[i] == c)
+            return i;
+    return -1;
+}
+
+int main() {
+
+    printf("Enter number of productions: ");
+    scanf("%d", &n);
+
+    printf("Enter productions (Example: E=TR):\n");
+    for (int i = 0; i < n; i++) {
+        scanf("%s", production[i]);
+        firstCount[i] = 0;
+        followCount[i] = 0;
+    }
+
+    // Collect terminals
+    for (int i = 0; i < n; i++) {
+        for (int j = 2; j < strlen(production[i]); j++) {
+            if (!isupper(production[i][j]) && production[i][j] != '#') {
+                terminals[tCount++] = production[i][j];
+            }
+        }
+    }
+    terminals[tCount++] = '$';
+
+    // Compute FIRST
+    for (int i = 0; i < n; i++)
+        findFirst(production[i][0], i);
+
+    // Compute FOLLOW
+    for (int i = 0; i < n; i++)
+        findFollow(production[i][0], i);
+
+    // Construct Parsing Table
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < tCount; j++) {
+            strcpy(table[i][j], "");
+        }
+    }
+
+    for (int i = 0; i < n; i++) {
+        char lhs = production[i][0];
+        char rhsFirst = production[i][2];
+
+        int row = getNonTerminalIndex(lhs);
+
+        if (rhsFirst == '#') {
+            for (int k = 0; k < followCount[row]; k++) {
+                int col = getTerminalIndex(follow[row][k]);
+                strcpy(table[row][col], production[i]);
+            }
+        } else if (!isupper(rhsFirst)) {
+            int col = getTerminalIndex(rhsFirst);
+            strcpy(table[row][col], production[i]);
+        } else {
+            int ntIndex = getNonTerminalIndex(rhsFirst);
+            for (int k = 0; k < firstCount[ntIndex]; k++) {
+                int col = getTerminalIndex(first[ntIndex][k]);
+                strcpy(table[row][col], production[i]);
+            }
+        }
+    }
+
+    // Print Parsing Table
+    printf("\nPredictive Parsing Table:\n\n");
+
+    printf("\t");
+    for (int i = 0; i < tCount; i++)
+        printf("%c\t", terminals[i]);
+    printf("\n");
+
+    for (int i = 0; i < n; i++) {
+        printf("%c\t", production[i][0]);
+        for (int j = 0; j < tCount; j++) {
+            printf("%s\t", table[i][j]);
+        }
+        printf("\n");
+    }
+
+    return 0;
+}

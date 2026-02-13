@@ -1,0 +1,121 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define MAX 100
+
+// Structure for NFA state
+typedef struct State {
+    int id;
+    char symbol;
+    struct State *out1;
+    struct State *out2;
+} State;
+
+// Structure for NFA fragment
+typedef struct {
+    State *start;
+    State *end;
+} Fragment;
+
+State states[MAX];
+int stateCount = 0;
+
+// Create new state
+State* newState(char symbol, State *out1, State *out2) {
+    states[stateCount].id = stateCount;
+    states[stateCount].symbol = symbol;
+    states[stateCount].out1 = out1;
+    states[stateCount].out2 = out2;
+    return &states[stateCount++];
+}
+
+// Stack for fragments
+Fragment stack[MAX];
+int top = -1;
+
+void push(Fragment f) {
+    stack[++top] = f;
+}
+
+Fragment pop() {
+    return stack[top--];
+}
+
+// Convert postfix regex to NFA
+void regexToNFA(char *postfix) {
+    for (int i = 0; i < strlen(postfix); i++) {
+        char c = postfix[i];
+
+        if (c >= 'a' && c <= 'z') {
+            State *s1 = newState(c, NULL, NULL);
+            State *s2 = newState('E', NULL, NULL);  // E = epsilon
+            s1->out1 = s2;
+
+            Fragment frag = {s1, s2};
+            push(frag);
+        }
+
+        else if (c == '.') {  // Concatenation
+            Fragment f2 = pop();
+            Fragment f1 = pop();
+
+            f1.end->symbol = 'E';
+            f1.end->out1 = f2.start;
+
+            Fragment newFrag = {f1.start, f2.end};
+            push(newFrag);
+        }
+
+        else if (c == '|') {  // Union
+            Fragment f2 = pop();
+            Fragment f1 = pop();
+
+            State *start = newState('E', f1.start, f2.start);
+            State *end = newState('E', NULL, NULL);
+
+            f1.end->symbol = 'E';
+            f1.end->out1 = end;
+
+            f2.end->symbol = 'E';
+            f2.end->out1 = end;
+
+            Fragment newFrag = {start, end};
+            push(newFrag);
+        }
+
+        else if (c == '*') {  // Kleene Star
+            Fragment f = pop();
+
+            State *start = newState('E', f.start, NULL);
+            State *end = newState('E', NULL, NULL);
+
+            f.end->symbol = 'E';
+            f.end->out1 = f.start;
+            f.end->out2 = end;
+
+            start->out2 = end;
+
+            Fragment newFrag = {start, end};
+            push(newFrag);
+        }
+    }
+
+    Fragment result = pop();
+
+    printf("\nNFA constructed successfully!\n");
+    printf("Start State: %d\n", result.start->id);
+    printf("End State: %d\n", result.end->id);
+}
+
+// Driver
+int main() {
+    char postfix[MAX];
+
+    printf("Enter postfix regular expression: ");
+    scanf("%s", postfix);
+
+    regexToNFA(postfix);
+
+    return 0;
+}

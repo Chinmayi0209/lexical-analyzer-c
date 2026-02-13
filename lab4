@@ -1,0 +1,100 @@
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+
+#define MAX 10
+#define SIZE 100
+
+// Function to eliminate immediate left recursion
+void eliminateLeftRecursion(char production[]) {
+    char lhs, alpha[SIZE], beta[SIZE];
+    int i, j = 0, k = 0;
+
+    lhs = production[0];
+
+    // Split RHS after ->
+    char *rhs = strstr(production, "->") + 2;
+
+    char *token = strtok(rhs, "|");
+
+    while (token != NULL) {
+        if (token[0] == lhs) {   // Left recursive part
+            for (i = 1; token[i] != '\0'; i++)
+                alpha[j++] = token[i];
+            alpha[j++] = '|';
+        } else {                // Non left recursive part
+            for (i = 0; token[i] != '\0'; i++)
+                beta[k++] = token[i];
+            beta[k++] = '|';
+        }
+        token = strtok(NULL, "|");
+    }
+
+    if (j == 0) {
+        printf("No Left Recursion Found.\n");
+        return;
+    }
+
+    alpha[j-1] = '\0';
+    beta[k-1] = '\0';
+
+    printf("\nAfter Removing Left Recursion:\n");
+    printf("%c -> %s%c'\n", lhs, beta, lhs);
+    printf("%c' -> %s%c' | e\n", lhs, alpha, lhs);
+}
+
+// Function to perform left factoring
+void leftFactoring(char production[]) {
+    char lhs = production[0];
+    char common[SIZE] = "";
+    char *rhs = strstr(production, "->") + 2;
+
+    char temp[SIZE];
+    strcpy(temp, rhs);
+
+    char *first = strtok(temp, "|");
+    char *second = strtok(NULL, "|");
+
+    if (second == NULL) {
+        printf("Not enough productions for factoring.\n");
+        return;
+    }
+
+    int i = 0;
+    while (first[i] == second[i] && first[i] != '\0')
+        i++;
+
+    if (i == 0) {
+        printf("No Common Prefix Found.\n");
+        return;
+    }
+
+    strncpy(common, first, i);
+    common[i] = '\0';
+
+    printf("\nAfter Left Factoring:\n");
+    printf("%c -> %s%c'\n", lhs, common, lhs);
+    printf("%c' -> %s | %s\n", lhs, first + i, second + i);
+}
+
+int main() {
+    char production[SIZE];
+    int choice;
+
+    printf("Enter Production (Example: A->Aa|b): ");
+    scanf("%s", production);
+
+    printf("\n1. Eliminate Left Recursion");
+    printf("\n2. Left Factoring");
+    printf("\nEnter choice: ");
+    scanf("%d", &choice);
+
+    if (choice == 1)
+        eliminateLeftRecursion(production);
+    else if (choice == 2)
+        leftFactoring(production);
+    else
+        printf("Invalid Choice!\n");
+
+    return 0;
+}
